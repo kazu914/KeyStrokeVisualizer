@@ -1,0 +1,86 @@
+version: '3'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml
+      - ./volumes/prometheus/data:/prometheus
+      - ./prometheus/targets/:/etc/prometheus/targets/
+    networks:
+      monitoring_net:
+        ipv4_address: 172.30.0.2
+    ports:
+      - 9090:9090
+    restart: always
+    
+  node_exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    command: --collector.textfile.directory=/run/prometheus
+    pid: "host"
+    volumes:
+        - prometheus_data:/prometheus
+        - prometheus_textfiles:/run/prometheus:ro
+        - /proc:/host/proc:ro
+        - /sys:/host/sys:ro
+        - /:/rootfs:ro
+      
+    networks:
+        monitoring_net:
+          ipv4_address: 172.30.0.3
+    ports:
+        - 9100:9100
+    restart: always
+    
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    networks:
+      monitoring_net:
+        ipv4_address: 172.30.0.4
+    ports:
+      - 3000:3000
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_ALLOW_ORG_CREATE: "false"
+      GF_INSTALL_PLUGINS: 'petrslavotinek-carpetplot-panel'
+    volumes:
+      - ./volumes/grafana/data:/var/lib/grafana
+      - ./grafana/provisioning/datasources/prom.yml:/etc/grafana/provisioning/datasources/prom.yml
+      - ./grafana/provisioning/dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./grafana/provisioning/dashboards/json:/var/lib/grafana/dashboards
+    restart: always
+
+      
+      
+  key_logger_exporter:
+    image: alpine
+    container_name: key_logger_exporter
+    volumes:
+       - prometheus_textfiles:/prometheus_textfiles
+       - ./make_prom.sh:/make_prom.sh
+       - ../.keystroke.log:/var/log/keystroke.log
+    command: /bin/sh /make_prom.sh
+    restart: always
+
+ 
+volumes:
+  prometheus_textfiles:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  prometheus_data:
+    driver: local
+
+networks:
+    monitoring_net:
+      driver: bridge
+      ipam:
+       driver: default
+       config:
+         - subnet: 172.30.0.0/24
