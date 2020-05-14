@@ -48,7 +48,9 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "true"
       GF_USERS_ALLOW_ORG_CREATE: "false"
-      GF_INSTALL_PLUGINS: 'petrslavotinek-carpetplot-panel'
+      GF_INSTALL_PLUGINS: "petrslavotinek-carpetplot-panel,ryantxu-ajax-panel,grafana-clock-panel"
+        
+        
     volumes:
       - ./volumes/grafana/data:/var/lib/grafana
       - ./grafana/provisioning/datasources/prom.yml:/etc/grafana/provisioning/datasources/prom.yml
